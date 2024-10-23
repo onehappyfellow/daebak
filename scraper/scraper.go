@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"net/smtp"
+	"os"
 	"regexp"
 	"strings"
 	"time"
@@ -16,7 +18,6 @@ type Article struct {
 }
 
 func main() {
-	fmt.Println("Scraping Chosun Ilbo")
 
 	c := colly.NewCollector(
 		colly.AllowedDomains("www.chosun.com"),
@@ -31,16 +32,19 @@ func main() {
 		if validateUrl(a.Url) {
 			if _, exists := articles[a.Url]; !exists {
 				articles[a.Url] = a
-				r := regexp.MustCompile(`\d{4}/\d{1,2}/\d{1,2}`)
-				dateStr := r.FindString(a.Url)
-				fmt.Println(dateStr, a.Headline)
 			}
 		}
 	})
 
 	c.Visit("https://www.chosun.com/economy/")
 
-	fmt.Printf("Page lists %d current articles", len(articles))
+	fmt.Printf("Scraped Chosun Ilbo - %d articles found\n", len(articles))
+
+	body := ""
+	for _, a := range articles {
+		body = fmt.Sprintf("%s%s https://www.chosun.com%s\n", body, a.Headline, a.Url)
+	}
+	sendEmail("Daebak Korean Daily", body)
 
 }
 
@@ -72,4 +76,29 @@ func validateUrl(url string) bool {
 
 	// url does not have date, default to invalid
 	return false
+}
+
+func sendEmail(subject string, body string) {
+	smtpHost := "smtp.gmail.com"
+	smtpPort := "587"
+	from := "jonathan.droege@gmail.com"
+	password := os.Getenv("GMAIL_APP_PASSWORD")
+	if password == "" {
+		fmt.Println("missing required environment variable GMAIL_APP_PASSWORD")
+		return
+	}
+
+	// Receiver email address(es).
+	to := []string{
+		"jonathan.droege+test@gmail.com",
+	}
+	message := fmt.Sprintf(
+		"From: Jonathan Droege <%s>\nTo: %s\nSubject: %s\n\n%s", from, to, subject, body,
+	)
+
+	auth := smtp.PlainAuth("", from, password, smtpHost)
+	err := smtp.SendMail(smtpHost+":"+smtpPort, auth, from, to, []byte(message))
+	if err != nil {
+		fmt.Println(err)
+	}
 }
