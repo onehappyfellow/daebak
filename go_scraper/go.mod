@@ -1,4 +1,4 @@
-module scraper
+module onehappyfellow.com/daebak
 
 go 1.23.0
 
