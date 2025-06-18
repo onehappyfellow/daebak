@@ -1,1 +1,5 @@
 selenium==4.26.0
+anthropic
+beautifulsoup4==4.13.3
+pyyaml==6.0.2
+requests==2.32.4
